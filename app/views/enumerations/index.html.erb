@@ -11,6 +11,9 @@
 <table class="list enumerations"><thead>
 <tr>
     <th><%= l(:field_name) %></th>
+    <% if klass::OptionName == :enumeration_issue_priorities %>
+    <th style="width: 75px"><%= l(:field_color) %></th>
+    <% end %>
     <th><%= l(:field_is_default) %></th>
     <th><%= l(:field_active) %></th>
     <th></th>
@@ -18,6 +21,9 @@
 <% enumerations.each do |enumeration| %>
 <tr>
     <td class="name"><%= link_to enumeration, edit_enumeration_path(enumeration) %></td>
+    <% if klass::OptionName == :enumeration_issue_priorities %>
+    <td style="background-color: <%= enumeration.color %>"></td>
+    <% end %>
     <td class="tick"><%= checked_image enumeration.is_default? %></td>
     <td class="tick"><%= checked_image enumeration.active? %></td>
     <td class="buttons">

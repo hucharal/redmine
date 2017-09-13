@@ -2,6 +2,7 @@
 
 <div class="box tabular">
   <p><%= f.text_field :name %></p>
+  <div style="padding-left: 180px"><%= f.text_field :color %></div>
   <p><%= f.check_box :active %></p>
   <p><%= f.check_box :is_default %></p>
 
@@ -9,3 +10,5 @@
     <p><%= custom_field_tag_with_label :enumeration, value %></p>
   <% end %>
 </div>
+
+<script>$('#enumeration_color').minicolors()</script>

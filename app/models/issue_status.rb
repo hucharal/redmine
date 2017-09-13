@@ -38,7 +38,8 @@ class IssueStatus < ActiveRecord::Base
   safe_attributes 'name',
     'is_closed',
     'position',
-    'default_done_ratio'
+    'default_done_ratio',
+    'color'
 
   # Update all the +Issues+ setting their done_ratio to the value of their +IssueStatus+
   def self.update_issue_done_ratios

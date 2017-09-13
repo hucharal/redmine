@@ -8,6 +8,7 @@
 <table class="list issue_statuses">
   <thead><tr>
   <th><%=l(:field_status)%></th>
+  <th style="width: 75px"><%=l(:field_color)%></th>
   <% if Issue.use_status_for_done_ratio? %>
   <th><%=l(:field_done_ratio)%></th>
   <% end %>
@@ -18,6 +19,7 @@
 <% for status in @issue_statuses %>
   <tr>
   <td class="name"><%= link_to status.name, edit_issue_status_path(status) %></td>
+  <td style="background-color: <%= status.color %>"></td>
   <% if Issue.use_status_for_done_ratio? %>
   <td><%= status.default_done_ratio %></td>
   <% end %>

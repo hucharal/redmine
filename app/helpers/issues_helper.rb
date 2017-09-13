@@ -539,4 +539,12 @@ module IssuesHelper
       end
     end
   end
+
+  def render_field_bg_color(field, issue)
+    color = nil
+    if [:status, :priority].include? field
+      color = field == :status ? issue.status.color : issue.priority.color
+    end
+    "style=\"background-color: #{color}\"" if color
+  end
 end
