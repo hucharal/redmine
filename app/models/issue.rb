@@ -66,8 +66,11 @@ class Issue < ActiveRecord::Base
   validates_length_of :subject, :maximum => 255
   validates_inclusion_of :done_ratio, :in => 0..100
   validates :estimated_hours, :numericality => {:greater_than_or_equal_to => 0, :allow_nil => true, :message => :invalid}
+  validates :done_hours, :numericality => {:greater_than_or_equal_to => 0, :allow_nil => true, :message => :invalid}
   validates :start_date, :date => true
   validates :due_date, :date => true
+  validates :start_done, :date => true
+  validates :done_date, :date => true
   validate :validate_issue, :validate_required_fields, :validate_permissions
   attr_protected :id
 
@@ -446,6 +449,10 @@ class Issue < ActiveRecord::Base
     write_attribute :estimated_hours, (h.is_a?(String) ? h.to_hours : h)
   end
 
+  def done_hours=(h)
+    write_attribute :done_hours, (h.is_a?(String) ? h.to_hours : h)
+  end
+
   safe_attributes 'project_id',
     'tracker_id',
     'status_id',
@@ -463,6 +470,9 @@ class Issue < ActiveRecord::Base
     'custom_fields',
     'lock_version',
     'notes',
+    'start_done',
+    'done_date',
+    'done_hours',
     :if => lambda {|issue, user| issue.new_record? || issue.attributes_editable?(user) }
 
   safe_attributes 'notes',

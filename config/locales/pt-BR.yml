@@ -243,6 +243,7 @@ pt-BR:
   field_tracker: Tipo
   field_subject: Título
   field_due_date: Data prevista
+  field_done_date: Data realizado
   field_assigned_to: Atribuído para
   field_priority: Prioridade
   field_fixed_version: Versão
@@ -273,6 +274,7 @@ pt-BR:
   field_attr_mail: Atributo para e-mail
   field_onthefly: Criar usuários dinamicamente ("on-the-fly")
   field_start_date: Início
+  field_start_done: Início realizado
   field_done_ratio: "% Terminado"
   field_auth_source: Modo de autenticação
   field_hide_mail: Ocultar meu e-mail
@@ -290,6 +292,7 @@ pt-BR:
   field_assignable: Tarefas podem ser atribuídas a este papel
   field_redirect_existing_links: Redirecionar links existentes
   field_estimated_hours: Tempo estimado
+  field_done_hours: Tempo realizado
   field_column_names: Colunas
   field_time_zone: Fuso-horário
   field_searchable: Pesquisável

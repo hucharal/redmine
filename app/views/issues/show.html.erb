@@ -70,9 +70,20 @@
   if User.current.allowed_to?(:view_time_entries, @project) && @issue.total_spent_hours > 0
     rows.right l(:label_spent_time), issue_spent_hours_details(@issue), :class => 'spent-time'
   end
+  unless @issue.disabled_core_fields.include?('start_done')
+    rows.right l(:field_start_done), format_date(@issue.start_done), :class => 'start-done'
+  end
+  unless @issue.disabled_core_fields.include?('done_date')
+    rows.right l(:field_done_date), format_date(@issue.done_date), :class => 'done-date'
+  end
+  unless @issue.disabled_core_fields.include?('done_hours')
+    rows.right l(:field_done_hours), l_hours_short(@issue.done_hours), :class => 'done-hours'
+  end
 end %>
 <%= render_half_width_custom_fields_rows(@issue) %>
 <%= call_hook(:view_issues_show_details_bottom, :issue => @issue) %>
+</div>
+<div id="done-attributes">
 </div>
 
 <% if @issue.description? || @issue.attachments.any? -%>

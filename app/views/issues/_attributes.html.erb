@@ -1,7 +1,7 @@
 <%= labelled_fields_for :issue, @issue do |f| %>
 
 <div class="splitcontent">
-<div class="splitcontentleft">
+<div class="splitcontentleft3">
 <% if @issue.safe_attribute?('status_id') && @allowed_statuses.present? %>
 <p><%= f.select :status_id, (@allowed_statuses.collect {|p| [p.name, p.id]}), {:required => true},
                 :onchange => "updateIssueFrom('#{escape_javascript update_issue_form_path(@project, @issue)}', this)" %></p>
@@ -43,34 +43,53 @@
 </p>
 <% end %>
 </div>
+<div class="splitcontentleft3">
+  <% if @issue.safe_attribute? 'parent_issue_id' %>
+  <p id="parent_issue"><%= f.text_field :parent_issue_id, :size => 10, :required => @issue.required_attribute?('parent_issue_id') %></p>
+  <%= javascript_tag "observeAutocompleteField('issue_parent_issue_id', '#{escape_javascript auto_complete_issues_path(:project_id => @issue.project, :scope => Setting.cross_project_subtasks, :status => @issue.closed? ? 'c' : 'o', :issue_id => @issue.id)}')" %>
+  <% end %>
+  
+  <% if @issue.safe_attribute? 'start_date' %>
+  <p id="start_date_area">
+    <%= f.date_field(:start_date, :size => 10, :required => @issue.required_attribute?('start_date')) %>
+    <%= calendar_for('issue_start_date') %>
+  </p>
+  <% end %>
+  
+  <% if @issue.safe_attribute? 'due_date' %>
+  <p id="due_date_area">
+    <%= f.date_field(:due_date, :size => 10, :required => @issue.required_attribute?('due_date')) %>
+    <%= calendar_for('issue_due_date') %>
+  </p>
+  <% end %>
+  
+  <% if @issue.safe_attribute? 'estimated_hours' %>
+  <p><%= f.hours_field :estimated_hours, :size => 3, :required => @issue.required_attribute?('estimated_hours') %> <%= l(:field_hours) %></p>
+  <% end %>
+  
+  <% if @issue.safe_attribute?('done_ratio') && Issue.use_field_for_done_ratio? %>
+  <p><%= f.select :done_ratio, ((0..10).to_a.collect {|r| ["#{r*10} %", r*10] }), :required => @issue.required_attribute?('done_ratio') %></p>
+  <% end %>
+</div>
 
-<div class="splitcontentright">
-<% if @issue.safe_attribute? 'parent_issue_id' %>
-<p id="parent_issue"><%= f.text_field :parent_issue_id, :size => 10, :required => @issue.required_attribute?('parent_issue_id') %></p>
-<%= javascript_tag "observeAutocompleteField('issue_parent_issue_id', '#{escape_javascript auto_complete_issues_path(:project_id => @issue.project, :scope => Setting.cross_project_subtasks, :status => @issue.closed? ? 'c' : 'o', :issue_id => @issue.id)}')" %>
-<% end %>
+<div class="splitcontentleft3">
+  <% if @issue.safe_attribute? 'start_done' %>
+  <p id="start_done_area">
+    <%= f.date_field(:start_done, :size => 10, :required => @issue.required_attribute?('start_done'), :label => 'Início realizado') %>
+    <%= calendar_for('issue_start_done') %>
+  </p>
+  <% end %>
 
-<% if @issue.safe_attribute? 'start_date' %>
-<p id="start_date_area">
-  <%= f.date_field(:start_date, :size => 10, :required => @issue.required_attribute?('start_date')) %>
-  <%= calendar_for('issue_start_date') %>
-</p>
-<% end %>
-
-<% if @issue.safe_attribute? 'due_date' %>
-<p id="due_date_area">
-  <%= f.date_field(:due_date, :size => 10, :required => @issue.required_attribute?('due_date')) %>
-  <%= calendar_for('issue_due_date') %>
-</p>
-<% end %>
-
-<% if @issue.safe_attribute? 'estimated_hours' %>
-<p><%= f.hours_field :estimated_hours, :size => 3, :required => @issue.required_attribute?('estimated_hours') %> <%= l(:field_hours) %></p>
-<% end %>
-
-<% if @issue.safe_attribute?('done_ratio') && Issue.use_field_for_done_ratio? %>
-<p><%= f.select :done_ratio, ((0..10).to_a.collect {|r| ["#{r*10} %", r*10] }), :required => @issue.required_attribute?('done_ratio') %></p>
-<% end %>
+  <% if @issue.safe_attribute? 'done_date' %>
+  <p id="done_date_area">
+    <%= f.date_field(:done_date, :size => 10, :required => @issue.required_attribute?('done_date')) %>
+    <%= calendar_for('issue_done_date') %>
+  </p>
+  <% end %>
+  
+  <% if @issue.safe_attribute? 'done_hours' %>
+  <p><%= f.hours_field :done_hours, :size => 3, :required => @issue.required_attribute?('done_hours') %> <%= l(:field_hours) %></p>
+  <% end %>
 </div>
 </div>
 
