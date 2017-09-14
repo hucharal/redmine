@@ -125,7 +125,10 @@ module Redmine
                                                :label => :label_activity},
                                  'issue' => {:sql => "#{TimeEntry.table_name}.issue_id",
                                              :klass => Issue,
-                                             :label => :label_issue}
+                                             :label => :label_issue},
+                                 'role' => {:sql => "#{RolesTimeEntry.table_name}.role_id",
+                                             :klass => Role,
+                                             :label => :label_role}
                                }
 
         # Add time entry custom fields

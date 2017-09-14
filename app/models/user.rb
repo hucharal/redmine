@@ -89,6 +89,7 @@ class User < Principal
   has_one :email_address, lambda {where :is_default => true}, :autosave => true
   has_many :email_addresses, :dependent => :delete_all
   belongs_to :auth_source
+  has_many :member
 
   scope :logged, lambda { where("#{User.table_name}.status <> #{STATUS_ANONYMOUS}") }
   scope :status, lambda {|arg| where(arg.blank? ? nil : {:status => arg.to_i}) }

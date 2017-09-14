@@ -23,6 +23,8 @@ class TimeEntry < ActiveRecord::Base
   belongs_to :issue
   belongs_to :user
   belongs_to :activity, :class_name => 'TimeEntryActivity'
+  has_many :roles_time_entries
+  has_many :roles, :through => :roles_time_entries
 
   attr_protected :user_id, :tyear, :tmonth, :tweek
 
@@ -50,12 +52,17 @@ class TimeEntry < ActiveRecord::Base
   before_validation :set_project_if_nil
   validate :validate_time_entry
 
+  before_save :set_roles
+
   scope :visible, lambda {|*args|
     joins(:project).
     where(TimeEntry.visible_condition(args.shift || User.current, *args))
   }
   scope :left_join_issue, lambda {
-    joins("LEFT OUTER JOIN #{Issue.table_name} ON #{Issue.table_name}.id = #{TimeEntry.table_name}.issue_id")
+    joins(
+      "LEFT OUTER JOIN #{Issue.table_name} ON #{Issue.table_name}.id = #{TimeEntry.table_name}.issue_id",
+      :roles_time_entries
+    )
   }
   scope :on_issue, lambda {|issue|
     joins(:issue).
@@ -165,5 +172,13 @@ class TimeEntry < ActiveRecord::Base
   # Returns the custom fields that can be edited by the given user
   def editable_custom_fields(user=nil)
     editable_custom_field_values(user).map(&:custom_field).uniq
+  end
+
+  def set_roles
+    members = User.current.
+                    member.
+                    scope.
+                    find_by(:project_id => self.project_id)
+    self.roles = members ? members.roles : []
   end
 end
