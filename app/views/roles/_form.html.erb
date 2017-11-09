@@ -43,7 +43,6 @@
     <%= select_tag(:copy_workflow_from, content_tag("option") + options_from_collection_for_select(@roles, :id, :name, params[:copy_workflow_from] || @copy_from.try(:id))) %></p>
   <% end %>
 </div>
-
 <h3><%= l(:label_permissions) %></h3>
 <div class="box tabular" id="permissions">
 <% perms_by_module = @role.setable_permissions.group_by {|p| p.project_module.to_s} %>

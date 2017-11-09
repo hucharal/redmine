@@ -775,6 +775,7 @@ pt-BR:
   permission_view_gantt: Ver gráfico gantt
   permission_move_issues: Mover tarefas
   permission_manage_issue_relations: Gerenciar relacionamentos de tarefas
+  permission_manage_issue_times: Gerenciar tempo de tarefas
   permission_delete_wiki_pages: Excluir páginas wiki
   permission_manage_boards: Gerenciar fóruns
   permission_delete_wiki_pages_attachments: Excluir anexos
