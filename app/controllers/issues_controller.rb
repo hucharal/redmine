@@ -41,6 +41,7 @@ class IssuesController < ApplicationController
 
   def index
     retrieve_query
+    #abort query_available_inline_columns_options(@query).inspect
 
     if @query.valid?
       respond_to do |format|
