@@ -32,9 +32,52 @@ module IssuesHelper
     end
   end
 
+  def grouped_issues_query_results(items, query, &block)
+    result_count_by_group = query.result_count_by_group
+    totals_by_group = query.totalable_columns.inject({}) do |h, column|
+      h[column] = query.total_by_group_for(column)
+      h
+    end
+    results = {}
+    #stored = []
+
+    items.each do |item|
+      if query.grouped?
+        group = query.group_by_column.value(item)
+        if group.empty?
+          (results[nil] ||= []) << item
+        else
+          group.each { |g| (results[g] ||= []) << item }
+        end
+      else
+        (results[nil] ||= []) << item
+      end
+    end
+
+    results.each do |group, issues|
+      group_name = group_count = nil
+      if query.grouped?
+        if group.blank? && group != false
+          group_name = "(#{l(:label_blank_value)})"
+        else
+          group_name = format_object(group)
+        end
+        group_name ||= ""
+        group_count = result_count_by_group ? result_count_by_group[group] : nil
+        group_totals = totals_by_group.map {|column, t| total_tag(column, t[group] || 0)}.join(" ").html_safe
+      end
+      issues.each do |issue|
+        #stored << [issue, group_name, group_count]
+        yield issue, group_name, group_count, group_totals
+        group_name = group_count = nil
+      end
+    end
+    #abort stored.inspect
+  end
+
   def grouped_issue_list(issues, query, &block)
     ancestors = []
-    grouped_query_results(issues, query) do |issue, group_name, group_count, group_totals|
+    grouped_issues_query_results(issues, query) do |issue, group_name, group_count, group_totals|
       while (ancestors.any? && !issue.is_descendant_of?(ancestors.last))
         ancestors.pop
       end
@@ -176,7 +219,7 @@ module IssuesHelper
     messages.map { |message, issues|
       "#{message}: " + issues.map {|i| "##{i.id}"}.join(', ')
     }
- end
+end
 
   # Returns a link for adding a new subtask to the given issue
   def link_to_new_subtask(issue)

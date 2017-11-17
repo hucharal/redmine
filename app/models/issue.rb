@@ -38,6 +38,8 @@ class Issue < ActiveRecord::Base
   has_many :relations_from, :class_name => 'IssueRelation', :foreign_key => 'issue_from_id', :dependent => :delete_all
   has_many :relations_to, :class_name => 'IssueRelation', :foreign_key => 'issue_to_id', :dependent => :delete_all
 
+  has_many :issue_times, :dependent => :destroy
+
   acts_as_attachable :after_add => :attachment_added, :after_remove => :attachment_removed
   acts_as_customizable
   acts_as_watchable
@@ -114,7 +116,8 @@ class Issue < ActiveRecord::Base
               :force_updated_on_change, :update_closed_on, :set_assigned_to_was
   after_save {|issue| issue.send :after_project_change if !issue.id_changed? && issue.project_id_changed?}
   after_save :reschedule_following_issues, :update_nested_set_attributes,
-             :update_parent_attributes, :delete_selected_attachments, :create_journal
+             :update_parent_attributes, :delete_selected_attachments, :create_journal,
+             :save_issue_times
   # Should be after_create but would be called before previous after_save callbacks
   after_save :after_create_from_copy
   after_destroy :update_parent_attributes
@@ -1877,5 +1880,31 @@ class Issue < ActiveRecord::Base
       end
       self.done_ratio ||= 0
     end
+  end
+
+  def save_issue_times
+    time_fields = time_fields_changed
+    if @previous_assigned_to_id && (not time_fields.empty?)
+      if issue_times.empty?
+        time_fields[:assigned_to_id] = @previous_assigned_to_id
+        issue_times.create time_fields
+      else
+        last_time = issue_times.last
+        if last_time.assigned_to_id == @previous_assigned_to_id
+          last_time.update time_fields
+        else
+          time_fields[:assigned_to_id] = @previous_assigned_to_id
+          issue_times.create time_fields
+        end
+      end
+    end
+  end
+
+  def time_fields_changed
+    time_fields = %w(due_date estimated_hours start_done done_date done_hours)
+    self.changes.select do |k, v|
+      time_fields.include?(k.to_s)
+    end.
+    transform_values { |v| v[1] }
   end
 end

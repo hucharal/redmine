@@ -56,15 +56,17 @@
   </p>
   <% end %>
   
-  <% if @issue.safe_attribute? 'due_date' %>
-  <p id="due_date_area">
-    <%= f.date_field(:due_date, :size => 10, :required => @issue.required_attribute?('due_date')) %>
-    <%= calendar_for('issue_due_date') %>
-  </p>
-  <% end %>
+  <% if User.current.allowed_to?(:manage_issue_times, @issue.project) %>
+    <% if @issue.safe_attribute? 'due_date' %>
+    <p id="due_date_area">
+      <%= f.date_field(:due_date, :size => 10, :required => @issue.required_attribute?('due_date')) %>
+      <%= calendar_for('issue_due_date') %>
+    </p>
+    <% end %>
   
-  <% if @issue.safe_attribute? 'estimated_hours' %>
-  <p><%= f.hours_field :estimated_hours, :size => 3, :required => @issue.required_attribute?('estimated_hours') %> <%= l(:field_hours) %></p>
+    <% if @issue.safe_attribute? 'estimated_hours' %>
+    <p><%= f.hours_field :estimated_hours, :size => 3, :required => @issue.required_attribute?('estimated_hours') %> <%= l(:field_hours) %></p>
+    <% end %>
   <% end %>
   
   <% if @issue.safe_attribute?('done_ratio') && Issue.use_field_for_done_ratio? %>
@@ -73,22 +75,24 @@
 </div>
 
 <div class="splitcontentleft3">
-  <% if @issue.safe_attribute? 'start_done' %>
-  <p id="start_done_area">
-    <%= f.date_field(:start_done, :size => 10, :required => @issue.required_attribute?('start_done'), :label => 'Início realizado') %>
-    <%= calendar_for('issue_start_done') %>
-  </p>
-  <% end %>
+  <% if User.current.allowed_to?(:manage_issue_times, @issue.project) %>
+    <% if @issue.safe_attribute? 'start_done' %>
+    <p id="start_done_area">
+      <%= f.date_field(:start_done, :size => 10, :required => @issue.required_attribute?('start_done'), :label => 'Início realizado') %>
+      <%= calendar_for('issue_start_done') %>
+    </p>
+    <% end %>
 
-  <% if @issue.safe_attribute? 'done_date' %>
-  <p id="done_date_area">
-    <%= f.date_field(:done_date, :size => 10, :required => @issue.required_attribute?('done_date')) %>
-    <%= calendar_for('issue_done_date') %>
-  </p>
-  <% end %>
-  
-  <% if @issue.safe_attribute? 'done_hours' %>
-  <p><%= f.hours_field :done_hours, :size => 3, :required => @issue.required_attribute?('done_hours') %> <%= l(:field_hours) %></p>
+    <% if @issue.safe_attribute? 'done_date' %>
+    <p id="done_date_area">
+      <%= f.date_field(:done_date, :size => 10, :required => @issue.required_attribute?('done_date')) %>
+      <%= calendar_for('issue_done_date') %>
+    </p>
+    <% end %>
+    
+    <% if @issue.safe_attribute? 'done_hours' %>
+    <p><%= f.hours_field :done_hours, :size => 3, :required => @issue.required_attribute?('done_hours') %> <%= l(:field_hours) %></p>
+    <% end %>
   <% end %>
 </div>
 </div>

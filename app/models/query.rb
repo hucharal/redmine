@@ -16,7 +16,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 class QueryColumn
-  attr_accessor :name, :sortable, :groupable, :totalable, :default_order
+  attr_accessor :name, :sortable, :groupable, :totalable, :default_order, :related, :relation
   include Redmine::I18n
 
   def initialize(name, options={})
@@ -28,6 +28,8 @@ class QueryColumn
     end
     self.totalable = options[:totalable] || false
     self.default_order = options[:default_order]
+    self.related = options[:related]
+    self.relation = options[:relation]
     @inline = options.key?(:inline) ? options[:inline] : true
     @caption_key = options[:caption] || "field_#{name}".to_sym
     @frozen = options[:frozen]
@@ -62,7 +64,17 @@ class QueryColumn
   end
 
   def value(object)
-    object.send name
+    if self.related.nil? 
+      object.send name
+    else 
+      values object
+    end
+  end
+
+  def values(object) 
+    object.
+      send(self.related.relation).
+      map { |t| t.send(self.related.name) }
   end
 
   def value_object(object)
@@ -970,9 +982,20 @@ class Query < ActiveRecord::Base
   end
 
   def base_group_scope
-    base_scope.
-      joins(joins_for_order_statement(group_by_statement)).
-      group(group_by_statement)
+    if group_by_statement == 'assigned_to'
+      IssueTime.joins(
+          "RIGHT JOIN #{Issue.table_name} ON #{Issue.table_name}.id = #{IssueTime.table_name}.issue_id " <<
+          "INNER JOIN #{Project.table_name} ON #{Project.table_name}.id = #{Issue.table_name}.project_id " << 
+          "INNER JOIN #{IssueStatus.table_name} ON #{IssueStatus.table_name}.id = #{Issue.table_name}.status_id"
+        ).
+        joins(joins_for_order_statement(group_by_statement)).
+        where(statement).
+        group(group_by_statement)
+    else
+      base_scope.
+        joins(joins_for_order_statement(group_by_statement)).
+        group(group_by_statement)
+    end
   end
 
   def total_for_custom_field(custom_field, scope, &block)
