@@ -56,7 +56,7 @@ class Issue < ActiveRecord::Base
 
   DONE_RATIO_OPTIONS = %w(issue_field issue_status)
 
-  attr_accessor :deleted_attachment_ids
+  attr_accessor :deleted_attachment_ids, :grouped_by
   attr_reader :current_journal
   delegate :notes, :notes=, :private_notes, :private_notes=, :to => :current_journal, :allow_nil => true
 
@@ -1883,28 +1883,38 @@ class Issue < ActiveRecord::Base
   end
 
   def save_issue_times
-    time_fields = time_fields_changed
-    if @previous_assigned_to_id && (not time_fields.empty?)
+    fields_changed = time_fields_changed
+    if @previous_assigned_to_id && (not fields_changed.empty?)
       if issue_times.empty?
-        time_fields[:assigned_to_id] = @previous_assigned_to_id
-        issue_times.create time_fields
+        fields_changed[:assigned_to_id] = @previous_assigned_to_id
+        issue_times.create fields_changed
       else
         last_time = issue_times.last
         if last_time.assigned_to_id == @previous_assigned_to_id
-          last_time.update time_fields
+          last_time.update fields_changed
         else
-          time_fields[:assigned_to_id] = @previous_assigned_to_id
-          issue_times.create time_fields
+          fields_changed[:assigned_to_id] = @previous_assigned_to_id
+          issue_times.create fields_changed
         end
       end
+    end
+    if @previous_assigned_to_id != assigned_to_id
+      attrs = {}
+      time_fields.each do |attribute|
+        attrs[attribute] = nil
+      end
+      update_columns attrs
     end
   end
 
   def time_fields_changed
-    time_fields = %w(due_date estimated_hours start_done done_date done_hours)
     self.changes.select do |k, v|
       time_fields.include?(k.to_s)
     end.
     transform_values { |v| v[1] }
+  end
+
+  def time_fields
+    %w(due_date estimated_hours start_done done_date done_hours)
   end
 end

@@ -34,10 +34,13 @@ module IssuesHelper
 
   def grouped_issues_query_results(items, query, &block)
     result_count_by_group = query.result_count_by_group
+    Rails.logger.debug '>>> totals_by_group'
     totals_by_group = query.totalable_columns.inject({}) do |h, column|
+      Rails.logger.debug '>>> inject'
       h[column] = query.total_by_group_for(column)
       h
     end
+    #abort totals_by_group[query.totalable_columns.first].inspect
     results = {}
     #stored = []
 
@@ -47,15 +50,19 @@ module IssuesHelper
         if group.empty?
           (results[nil] ||= []) << item
         else
-          group.each { |g| (results[g] ||= []) << item }
+          group.each do |issue_time|
+            (results[issue_time.assigned_to] ||= []) << issue_time
+          end
         end
       else
         (results[nil] ||= []) << item
       end
     end
+    #abort results.inspect
 
     results.each do |group, issues|
       group_name = group_count = nil
+      grouped_by = nil
       if query.grouped?
         if group.blank? && group != false
           group_name = "(#{l(:label_blank_value)})"
@@ -65,10 +72,14 @@ module IssuesHelper
         group_name ||= ""
         group_count = result_count_by_group ? result_count_by_group[group] : nil
         group_totals = totals_by_group.map {|column, t| total_tag(column, t[group] || 0)}.join(" ").html_safe
+        grouped_by = query.group_by_column.name
       end
-      issues.each do |issue|
-        #stored << [issue, group_name, group_count]
-        yield issue, group_name, group_count, group_totals
+      issues.each do |item|
+        issue, issue_time = item, nil
+        issue, issue_time = item.issue, item if item.is_a?(IssueTime)
+        issue.grouped_by = grouped_by
+        #stored << [issue, issue_time]
+        yield issue, issue_time, group_name, group_count, group_totals
         group_name = group_count = nil
       end
     end
@@ -77,11 +88,11 @@ module IssuesHelper
 
   def grouped_issue_list(issues, query, &block)
     ancestors = []
-    grouped_issues_query_results(issues, query) do |issue, group_name, group_count, group_totals|
+    grouped_issues_query_results(issues, query) do |issue, issue_time, group_name, group_count, group_totals|
       while (ancestors.any? && !issue.is_descendant_of?(ancestors.last))
         ancestors.pop
       end
-      yield issue, ancestors.size, group_name, group_count, group_totals
+      yield issue, issue_time, ancestors.size, group_name, group_count, group_totals
       ancestors << issue unless issue.leaf?
     end
   end

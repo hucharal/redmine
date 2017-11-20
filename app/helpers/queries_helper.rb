@@ -195,8 +195,8 @@ module QueriesHelper
     content_tag('th', content)
   end
 
-  def column_content(column, item)
-    value = column.value_object(item)
+  def column_content(column, item, related=nil)
+    value = column.value_object(item, related)
     if value.is_a?(Array)
       value.collect {|v| column_value(column, item, v)}.compact.join(', ').html_safe
     else

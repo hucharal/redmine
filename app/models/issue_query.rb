@@ -15,6 +15,55 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+class IssueQueryColumn < QueryColumn
+  def value(issue)
+    if name != :assigned_to
+      issue.send name
+    else 
+      issue.issue_times
+    end
+  end
+
+  def value_object(issue, issue_time)
+    if name == :estimated_hours || name == :done_hours
+      value_object_time issue, issue_time
+    else
+      if issue.grouped_by.nil?
+        issue.send name
+      else
+        value_grouped issue, issue_time
+      end
+    end
+  end
+
+  def value_grouped(issue, issue_time)
+    if issue.grouped_by != :assigned_to
+      issue.send name
+    else
+      if issue_time.nil?
+        issue.send name
+      else
+        issue_time.send name
+      end
+    end
+  end
+
+  def value_object_time(issue, issue_time)
+    if issue.grouped_by.nil?
+      if issue.issue_times.empty?
+        issue.send name
+      else
+        issue.issue_times.
+          map(&name).
+          sum(&:to_f)
+      end
+    else
+      value_grouped issue, issue_time
+    end
+  end
+
+end
+
 class IssueQuery < Query
 
   self.queried_class = Issue
@@ -29,23 +78,18 @@ class IssueQuery < Query
     QueryColumn.new(:priority, :sortable => "#{IssuePriority.table_name}.position", :default_order => 'desc', :groupable => true),
     QueryColumn.new(:subject, :sortable => "#{Issue.table_name}.subject"),
     QueryColumn.new(:author, :sortable => lambda {User.fields_for_order_statement("authors")}, :groupable => true),
-    QueryColumn.new(
-      :assigned_to, 
-      :sortable => lambda {User.fields_for_order_statement}, 
-      :groupable => true, 
-      :related => QueryColumn::new(:assigned_to, :relation => :issue_times)
-    ),
+    IssueQueryColumn.new(:assigned_to, :sortable => lambda {User.fields_for_order_statement}, :groupable => true),
     QueryColumn.new(:updated_on, :sortable => "#{Issue.table_name}.updated_on", :default_order => 'desc'),
     QueryColumn.new(:category, :sortable => "#{IssueCategory.table_name}.name", :groupable => true),
     QueryColumn.new(:fixed_version, :sortable => lambda {Version.fields_for_order_statement}, :groupable => true),
     QueryColumn.new(:start_date, :sortable => "#{Issue.table_name}.start_date"),
-    QueryColumn.new(:due_date, :sortable => "#{Issue.table_name}.due_date"),
-    QueryColumn.new(:estimated_hours, :sortable => "#{Issue.table_name}.estimated_hours", :totalable => true),
+    IssueQueryColumn.new(:due_date, :sortable => "#{Issue.table_name}.due_date"),
+    IssueQueryColumn.new(:estimated_hours, :sortable => "#{Issue.table_name}.estimated_hours", :totalable => true),
     QueryColumn.new(:total_estimated_hours,
       :sortable => "COALESCE((SELECT SUM(estimated_hours) FROM #{Issue.table_name} subtasks" +
         " WHERE subtasks.root_id = #{Issue.table_name}.root_id AND subtasks.lft >= #{Issue.table_name}.lft AND subtasks.rgt <= #{Issue.table_name}.rgt), 0)",
       :default_order => 'desc'),
-    QueryColumn.new(:done_hours, :sortable => "#{Issue.table_name}.done_hours", :totalable => true),
+    IssueQueryColumn.new(:done_hours, :sortable => "#{Issue.table_name}.done_hours", :totalable => true),
     QueryColumn.new(:done_ratio, :sortable => "#{Issue.table_name}.done_ratio", :groupable => true),
     QueryColumn.new(:created_on, :sortable => "#{Issue.table_name}.created_on", :default_order => 'desc'),
     QueryColumn.new(:closed_on, :sortable => "#{Issue.table_name}.closed_on", :default_order => 'desc'),
@@ -256,14 +300,71 @@ class IssueQuery < Query
 
   # Returns the issue count
   def issue_count
-    base_scope.count
+    if grouped? && group_by_column.name == :assigned_to
+      base_scope.
+        joins("LEFT JOIN #{IssueTime.table_name} ON #{IssueTime.table_name}.issue_id = #{Issue.table_name}.id").
+        where("#{IssueTime.table_name}.id IS NULL").count +
+      IssueTime.joins(:issue).merge(base_scope).count
+    else
+      base_scope.count
+    end
+  rescue ::ActiveRecord::StatementInvalid => e
+    raise StatementInvalid.new(e.message)
+  end
+
+  def total_by_group_for(column)
+    grouped_query do |scope|
+      Rails.logger.debug '>>> grouped_query 2'
+      total_with_scope(column, scope, true)
+    end
+  end
+
+  def total_with_scope(column, scope, group=false)
+    unless column.is_a?(QueryColumn)
+      column = column.to_sym
+      column = available_totalable_columns.detect {|c| c.name == column}
+    end
+    if column.is_a?(QueryCustomFieldColumn)
+      custom_field = column.custom_field
+      send "total_for_custom_field", custom_field, scope
+    else
+      send "total_for_#{column.name}", scope, group
+    end
   rescue ::ActiveRecord::StatementInvalid => e
     raise StatementInvalid.new(e.message)
   end
 
   # Returns sum of all the issue's estimated_hours
-  def total_for_estimated_hours(scope)
-    map_total(scope.sum(:estimated_hours)) {|t| t.to_f.round(2)}
+  def total_for_estimated_hours(scope, group=false)
+    issue_scope = scope.where("#{Issue.table_name}.assigned_to_id IS NULL");
+    time_scope = IssueTime.joins(:issue).merge(scope)
+    map_total(issue_scope.sum(:estimated_hours)) {|t| t.to_f.round(2)} +
+    map_total(time_scope.sum(:estimated_hours)) {|t| t.to_f.round(2)}
+  end
+
+  # Returns sum of all the issue's done_hours
+  def total_for_done_hours(scope, group=false)
+    Rails.logger.debug '>>> total_for_done_hours'
+    if group && group_by_column.name == :assigned_to
+      #total_done_hours = map_total(scope.sum(:done_hours)) {|t| t.to_f.round(2)}
+      scope = scope.select(
+        "IFNULL(SUM(#{IssueTime.table_name}.done_hours), SUM(#{Issue.table_name}.done_hours)) AS done_hours"
+      )
+      abort scope.sum(:done_hours).inspect
+      total_done_hours = map_total(sum.sum_done_hours) {|t| t.to_f.round(2)}
+      #if total.is_a?(Hash)
+        #total.keys.each {|k| total[k] = yield total[k]}
+      #else
+        #total = yield total
+      #end
+    total
+    else
+      issue_scope = scope.where("#{Issue.table_name}.assigned_to_id IS NULL")
+      time_scope = IssueTime.joins(:issue).merge(scope)
+      total_done_hours = map_total(issue_scope.sum(:done_hours)) {|t| t.to_f.round(2)} +
+        map_total(time_scope.sum(:done_hours)) {|t| t.to_f.round(2)}
+    end
+    total_done_hours
   end
 
   # Returns sum of all the issue's time entries hours

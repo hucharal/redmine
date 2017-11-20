@@ -16,7 +16,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 class QueryColumn
-  attr_accessor :name, :sortable, :groupable, :totalable, :default_order, :related, :relation
+  attr_accessor :name, :sortable, :groupable, :totalable, :default_order
   include Redmine::I18n
 
   def initialize(name, options={})
@@ -28,8 +28,6 @@ class QueryColumn
     end
     self.totalable = options[:totalable] || false
     self.default_order = options[:default_order]
-    self.related = options[:related]
-    self.relation = options[:relation]
     @inline = options.key?(:inline) ? options[:inline] : true
     @caption_key = options[:caption] || "field_#{name}".to_sym
     @frozen = options[:frozen]
@@ -64,20 +62,10 @@ class QueryColumn
   end
 
   def value(object)
-    if self.related.nil? 
-      object.send name
-    else 
-      values object
-    end
+    object.send name
   end
 
-  def values(object) 
-    object.
-      send(self.related.relation).
-      map { |t| t.send(self.related.name) }
-  end
-
-  def value_object(object)
+  def value_object(object, related=nil)
     object.send name
   end
 
@@ -917,6 +905,7 @@ class Query < ActiveRecord::Base
   # or nil if the query is not grouped
   def total_by_group_for(column)
     grouped_query do |scope|
+      Rails.logger.debug '>>> grouped_query'
       total_with_scope(column, scope)
     end
   end
@@ -950,6 +939,7 @@ class Query < ActiveRecord::Base
         # Rails3 will raise an (unexpected) RecordNotFound if there's only a nil group value
         r = yield base_group_scope
       rescue ActiveRecord::RecordNotFound
+        Rails.logger.debug '>>> rescue'
         r = {nil => yield(base_scope)}
       end
       c = group_by_column
@@ -982,6 +972,7 @@ class Query < ActiveRecord::Base
   end
 
   def base_group_scope
+    Rails.logger.debug '>>> base_group_scope'
     if group_by_statement == 'assigned_to'
       IssueTime.joins(
           "RIGHT JOIN #{Issue.table_name} ON #{Issue.table_name}.id = #{IssueTime.table_name}.issue_id " <<
