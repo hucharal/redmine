@@ -312,9 +312,25 @@ class IssueQuery < Query
     raise StatementInvalid.new(e.message)
   end
 
+  def base_group_scope
+    if group_by_statement == 'assigned_to'
+      IssueTime.joins(
+          "RIGHT JOIN #{Issue.table_name} ON #{Issue.table_name}.id = #{IssueTime.table_name}.issue_id " <<
+          "INNER JOIN #{Project.table_name} ON #{Project.table_name}.id = #{Issue.table_name}.project_id " << 
+          "INNER JOIN #{IssueStatus.table_name} ON #{IssueStatus.table_name}.id = #{Issue.table_name}.status_id"
+        ).
+        joins(joins_for_order_statement(group_by_statement)).
+        where(statement).
+        group(group_by_statement)
+    else
+      base_scope.
+        joins(joins_for_order_statement(group_by_statement)).
+        group(group_by_statement)
+    end
+  end
+
   def total_by_group_for(column)
     grouped_query do |scope|
-      Rails.logger.debug '>>> grouped_query 2'
       total_with_scope(column, scope, true)
     end
   end
@@ -336,28 +352,25 @@ class IssueQuery < Query
 
   # Returns sum of all the issue's estimated_hours
   def total_for_estimated_hours(scope, group=false)
-    issue_scope = scope.where("#{Issue.table_name}.assigned_to_id IS NULL");
-    time_scope = IssueTime.joins(:issue).merge(scope)
-    map_total(issue_scope.sum(:estimated_hours)) {|t| t.to_f.round(2)} +
-    map_total(time_scope.sum(:estimated_hours)) {|t| t.to_f.round(2)}
+    if group && group_by_column.name == :assigned_to
+      total_est_hours = map_total(scope.sum(:estimated_hours)) {|t| t.to_f.round(2)}
+      issue_total_est_hours = map_total(scope.sum("#{Issue.table_name}.estimated_hours")) {|t| t.to_f.round(2)}
+      total_est_hours[nil] = issue_total_est_hours[nil]
+    else
+      issue_scope = scope.where("#{Issue.table_name}.assigned_to_id IS NULL");
+      time_scope = IssueTime.joins(:issue).merge(scope)
+      total_est_hours = map_total(issue_scope.sum(:estimated_hours)) {|t| t.to_f.round(2)} +
+        map_total(time_scope.sum(:estimated_hours)) {|t| t.to_f.round(2)}
+    end
+    total_est_hours
   end
 
   # Returns sum of all the issue's done_hours
   def total_for_done_hours(scope, group=false)
-    Rails.logger.debug '>>> total_for_done_hours'
     if group && group_by_column.name == :assigned_to
-      #total_done_hours = map_total(scope.sum(:done_hours)) {|t| t.to_f.round(2)}
-      scope = scope.select(
-        "IFNULL(SUM(#{IssueTime.table_name}.done_hours), SUM(#{Issue.table_name}.done_hours)) AS done_hours"
-      )
-      abort scope.sum(:done_hours).inspect
-      total_done_hours = map_total(sum.sum_done_hours) {|t| t.to_f.round(2)}
-      #if total.is_a?(Hash)
-        #total.keys.each {|k| total[k] = yield total[k]}
-      #else
-        #total = yield total
-      #end
-    total
+      total_done_hours = map_total(scope.sum(:done_hours)) {|t| t.to_f.round(2)}
+      issue_total_done_hours = map_total(scope.sum("#{Issue.table_name}.done_hours")) {|t| t.to_f.round(2)}
+      total_done_hours[nil] = issue_total_done_hours[nil]
     else
       issue_scope = scope.where("#{Issue.table_name}.assigned_to_id IS NULL")
       time_scope = IssueTime.joins(:issue).merge(scope)

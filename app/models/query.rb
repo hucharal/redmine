@@ -905,7 +905,6 @@ class Query < ActiveRecord::Base
   # or nil if the query is not grouped
   def total_by_group_for(column)
     grouped_query do |scope|
-      Rails.logger.debug '>>> grouped_query'
       total_with_scope(column, scope)
     end
   end
@@ -939,7 +938,6 @@ class Query < ActiveRecord::Base
         # Rails3 will raise an (unexpected) RecordNotFound if there's only a nil group value
         r = yield base_group_scope
       rescue ActiveRecord::RecordNotFound
-        Rails.logger.debug '>>> rescue'
         r = {nil => yield(base_scope)}
       end
       c = group_by_column
@@ -972,21 +970,9 @@ class Query < ActiveRecord::Base
   end
 
   def base_group_scope
-    Rails.logger.debug '>>> base_group_scope'
-    if group_by_statement == 'assigned_to'
-      IssueTime.joins(
-          "RIGHT JOIN #{Issue.table_name} ON #{Issue.table_name}.id = #{IssueTime.table_name}.issue_id " <<
-          "INNER JOIN #{Project.table_name} ON #{Project.table_name}.id = #{Issue.table_name}.project_id " << 
-          "INNER JOIN #{IssueStatus.table_name} ON #{IssueStatus.table_name}.id = #{Issue.table_name}.status_id"
-        ).
-        joins(joins_for_order_statement(group_by_statement)).
-        where(statement).
-        group(group_by_statement)
-    else
-      base_scope.
-        joins(joins_for_order_statement(group_by_statement)).
-        group(group_by_statement)
-    end
+    base_scope.
+      joins(joins_for_order_statement(group_by_statement)).
+      group(group_by_statement)
   end
 
   def total_for_custom_field(custom_field, scope, &block)

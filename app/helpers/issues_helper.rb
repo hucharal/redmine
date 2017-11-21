@@ -34,13 +34,10 @@ module IssuesHelper
 
   def grouped_issues_query_results(items, query, &block)
     result_count_by_group = query.result_count_by_group
-    Rails.logger.debug '>>> totals_by_group'
     totals_by_group = query.totalable_columns.inject({}) do |h, column|
-      Rails.logger.debug '>>> inject'
       h[column] = query.total_by_group_for(column)
       h
     end
-    #abort totals_by_group[query.totalable_columns.first].inspect
     results = {}
     #stored = []
 
@@ -58,7 +55,6 @@ module IssuesHelper
         (results[nil] ||= []) << item
       end
     end
-    #abort results.inspect
 
     results.each do |group, issues|
       group_name = group_count = nil
