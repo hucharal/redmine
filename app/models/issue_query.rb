@@ -344,6 +344,9 @@ class IssueQuery < Query
       custom_field = column.custom_field
       send "total_for_custom_field", custom_field, scope
     else
+      Rails.logger.debug ">>> total_with_scope"
+      Rails.logger.debug group
+      Rails.logger.debug column.name
       send "total_for_#{column.name}", scope, group
     end
   rescue ::ActiveRecord::StatementInvalid => e
@@ -381,7 +384,7 @@ class IssueQuery < Query
   end
 
   # Returns sum of all the issue's time entries hours
-  def total_for_spent_hours(scope)
+  def total_for_spent_hours(scope, group=false)
     total = scope.joins(:time_entries).
       where(TimeEntry.visible_condition(User.current)).
       sum("#{TimeEntry.table_name}.hours")
